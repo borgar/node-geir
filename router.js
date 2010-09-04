@@ -11,6 +11,23 @@ var mime = require('./mime'),
     HttpResponseServerError = http.HttpResponseServerError;
 
 
+function log_request ( req, response ) {
+  var size = 0;
+  if ( typeof response.content === 'string' ) {
+    size = Buffer.byteLength( response.content );
+  }
+  else if ( 'length' in response.content ) {
+    size = response.content.length;
+  }
+  console.log(
+      '[' + new Date().toUTCString().replace(/(^\S+\s|\s\S+$)/g,'') + ']', // remove weekday, timezone
+      req.method, require('url').parse( req.url, false ).pathname,
+      "HTTP/" + req.httpVersion,
+      response.status_code,
+      size
+  );
+}
+
 function Router () {
   this._routes = {
     'DELETE': [],
@@ -47,6 +64,7 @@ Router.prototype = {
     var routes = this._routes[ req.method ] || [];
     var request = new HttpRequest( req );
     var response = null;
+    var logging = this.LOGGING;
 
     // try to match a handler to this request
     for ( var i=0,l=routes.length; i<l; i++ ) {
@@ -85,7 +103,7 @@ Router.prototype = {
             // FIXME: do a better job at showing errors (stack)
             // TODO: make error exposure configurable
             response = new HttpResponseServerError( err.name + ': ' + err.message );
-            if ( this.LOGGING ) {
+            if ( logging ) {
               ;;;console.log( err.stack );
             }
           }
@@ -99,31 +117,18 @@ Router.prototype = {
       response = new HttpResponseNotFound( 'Nothing matched your request.' );
     }
 
-    if ( this.LOGGING ) {
-      var size = 0;
-      try {
-        size = Buffer.byteLength( response.content );
-      }
-      catch (x) {}
-      console.log(
-          '[' + new Date().toUTCString().replace(/(^\S+\s|\s\S+$)/g,'') + ']', // remove weekday, timezone
-          req.method, request.path,
-          "HTTP/" + req.httpVersion,
-          response.status_code,
-          size
-      );
-    }
-    
     // if response is marked delayed, then we'll hold of until it emits data 
     if ( response.delay ) {
       // TODO: fix this so that it maps to write/flush/end ...
-      // FIXME: add a timeout!
+      // FIXME: add a timeout! (configurable)
       response.on('end', function ( data ) {
-         res.writeHead( response.status_code, HttpResponse.get_headers( response ) );
-         res.end( response.content );
+        if ( logging ) { log_request( req, response ); }
+        res.writeHead( response.status_code, HttpResponse.get_headers( response ) );
+        res.end( response.content );
       });
     }
     else {
+      if ( logging ) { log_request( req, response ); }
       res.writeHead( response.status_code, HttpResponse.get_headers( response ) );
       res.end( response.content );
     }
