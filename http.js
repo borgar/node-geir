@@ -163,7 +163,14 @@ HttpResponse.get_headers = function ( response ) {
 
   // add a content-length
   // TODO: if response.content is a Buffer then we need to get it's length correctly
-  headers.push([ 'Content-Length', Buffer.byteLength( response.content||'' ) ]);
+  var size = 0;
+  if ( typeof response.content === 'string' ) {
+    size = Buffer.byteLength( response.content );
+  }
+  else if ( 'length' in response.content ) {
+    size = response.content.length;
+  }
+  headers.push([ 'Content-Length', size ]);
 
   // add any other headers found
   for ( var header in response ) {
