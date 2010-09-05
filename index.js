@@ -18,7 +18,14 @@ function Server ( port ) {
   var self = this;
   this._router = new Router();
   this._server = http.createServer(function ( req, res ) {
-    self._router.route( req, res );
+    try {
+      self._router.route( req, res );
+    }
+    catch ( err ) {
+      sys.log( err );
+      res.writeHead( 500, 'Server error' );
+      res.end();
+    }
   });
   if ( port ) {
     this.listen( port );
