@@ -50,7 +50,7 @@ Server.prototype = {
   run_hooks: function ( name ) {
     var res, args = toArray( arguments ).slice(1)
         mw = this.middleware;
-    for (var i=0,l=mw.length; i<l; i++) {^M
+    for (var i=0,l=mw.length; i<l; i++) {
       if ( name in mw[i] ) {
         res = mw[i][name].apply( mw[i], args );
         if ( res === false ) {
