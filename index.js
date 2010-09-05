@@ -4,6 +4,7 @@
  */
 
 var Router = require('./router').Router,
+    toArray = require('./utils').toArray,
     http   = require('http'),
     sys    = require('sys');
 
@@ -40,6 +41,21 @@ Server.prototype = {
   },
   set LOGGING ( val ) {
     return this._router.LOGGING = !!val;
+  },
+  
+  middleware: [],
+  run_hooks: function ( name ) {
+    var res, args = toArray( arguments ).slice(1)
+        mw = this.middleware;
+    for (var i=0,l=mw.length; i<l; i++) {^M
+      if ( name in mw[i] ) {
+        res = mw[i][name].apply( mw[i], args );
+        if ( res === false ) {
+          return res;
+        }
+      }
+    }
+    return true;
   },
 
   get: function ( path, opts, handler ) {
