@@ -82,7 +82,8 @@ HttpRequest.prototype = {
 
 function HttpResponse ( content, mime, status ) {
   
-  this.content = content ? String( content ) : '';
+  //this.content = content ? String( content ) : '';
+  this.content = content || '';
 
   if ( arguments.length === 2 && Object(mime) === mime ) {
     for ( key in mime ) { this[ key ] = mime; }
@@ -96,7 +97,8 @@ function HttpResponse ( content, mime, status ) {
   }
   
   this._jar = [];
-  
+  this._size = 0;
+
 }
 var EventEmitter = require('events').EventEmitter;
 
@@ -144,37 +146,86 @@ HttpResponse.prototype.delete_cookie = function ( key, path, domain ) {
 };
 
 HttpResponse.prototype.write = function ( content ) {
-  this.content += String( content );
-};
-HttpResponse.prototype.flush = function ( content ) {
-  if ( content ) {
-    this.content += String( content );
+
+  // no content already... just set some.
+  if ( !this.content ) {
+
+    this.content = content;
+
   }
-  this.emit( 'end', this.content );
+  // have some form of content
+  else if ( this.content ) {
+
+    // start streaming data if content is a buffer
+    if ( content instanceof Buffer ) {
+      
+      // send headers if they aren't already sent...
+      if ( !this._socket._headerSent ) {
+        this['Transfer-Encoding'] = "chunked";
+        this._socket.writeHead( this.status_code, this.get_headers( true ) );
+      }
+      
+      this._socket.write( this.content ); // assumes ascii if content is string
+      this.content = content;
+      
+    }
+
+    else {
+      // TODO: handle JSON encoding here?
+      this.content += String( content );
+    }
+    
+  }
+
+  this.emit( 'write' );
 };
-// HttpResponse.prototype.tell: function ( content ) {};
+HttpResponse.prototype.end = function ( content ) {
+  
+  // push any content
+  if ( content ) {
+    this.write( content );
+  }
+  
+  // send headers if they aren't already sent
+  if ( !this._socket._headerSent ) {
+    this._socket.writeHead( this.status_code, this.get_headers( true ) );
+  }  
+
+  // flush any content out to the world
+  if ( this.content ) {
+    this._socket.end( this.content );
+  }
+  else {
+    this._socket.end();
+  }
+  
+  this.emit( 'end' );
+
+};
+
 
 
 // helper function to safely extract all headers from a HttpResponse
-HttpResponse.get_headers = function ( response ) {
+HttpResponse.prototype.get_headers = function () {
   var headers = [];
 
-  headers.push([ 'Content-Type', response.content_type ]);
+  headers.push([ 'Content-Type', this.content_type ]);
 
   // add a content-length
   // TODO: if response.content is a Buffer then we need to get it's length correctly
-  var size = 0;
-  if ( typeof response.content === 'string' ) {
-    size = Buffer.byteLength( response.content );
+  if ( this['Transfer-Encoding'] !== 'chunked' ) {
+    if ( typeof this.content === 'string' ) {
+      this._size = Buffer.byteLength( this.content );
+    }
+    else if ( 'length' in this.content ) {
+      this._size = this.content.length;
+    }
+    headers.push([ 'Content-Length', this._size ]);
   }
-  else if ( 'length' in response.content ) {
-    size = response.content.length;
-  }
-  headers.push([ 'Content-Length', size ]);
 
   // add any other headers found
-  for ( var header in response ) {
-    var val = response[ header ];
+  for ( var header in this ) {
+    var val = this[ header ];
     if ( /^(_|(content(_type)?|mimetype|delay|status_code)$)/i.test( header ) || 
          !( typeof val === 'string' || typeof val === 'number' ) ) {
       continue;
@@ -186,8 +237,8 @@ HttpResponse.get_headers = function ( response ) {
   }
   
   // finally, add cookies
-  if ( response._jar ) {
-    response._jar.forEach(function ( cookie ) {
+  if ( this._jar ) {
+    this._jar.forEach(function ( cookie ) {
       headers.push([ 'Set-Cookie', cookie.toString() ]);
     });
   }

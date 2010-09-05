@@ -5,28 +5,12 @@
 var mime = require('./mime'),
     http = require('./http'),
     utils = require('./utils'),
+    sys = require('sys'),
     HttpResponse = http.HttpResponse,
     HttpRequest = http.HttpRequest,
     HttpResponseNotFound = http.HttpResponseNotFound;
     HttpResponseServerError = http.HttpResponseServerError;
 
-
-function log_request ( req, response ) {
-  var size = 0;
-  if ( typeof response.content === 'string' ) {
-    size = Buffer.byteLength( response.content );
-  }
-  else if ( 'length' in response.content ) {
-    size = response.content.length;
-  }
-  console.log(
-      '[' + new Date().toUTCString().replace(/(^\S+\s|\s\S+$)/g,'') + ']', // remove weekday, timezone
-      req.method, require('url').parse( req.url, false ).pathname,
-      "HTTP/" + req.httpVersion,
-      response.status_code,
-      size
-  );
-}
 
 function Router () {
   this._routes = {
@@ -117,21 +101,15 @@ Router.prototype = {
       response = new HttpResponseNotFound( 'Nothing matched your request.' );
     }
 
+    response._socket = res
+    response.on('end', function () {
+      if ( logging ) { 
+        sys.log([ req.method, req.url, "HTTP/" + req.httpVersion, this.status_code, this._size ].join(' '));
+      }
+    });
+
     // if response is marked delayed, then we'll hold of until it emits data 
-    if ( response.delay ) {
-      // TODO: fix this so that it maps to write/flush/end ...
-      // FIXME: add a timeout! (configurable)
-      response.on('end', function ( data ) {
-        if ( logging ) { log_request( req, response ); }
-        res.writeHead( response.status_code, HttpResponse.get_headers( response ) );
-        res.end( response.content );
-      });
-    }
-    else {
-      if ( logging ) { log_request( req, response ); }
-      res.writeHead( response.status_code, HttpResponse.get_headers( response ) );
-      res.end( response.content );
-    }
+    if ( !response.delay ) { response.end(); }
 
   },
   
