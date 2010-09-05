@@ -20,7 +20,10 @@ function Server ( port ) {
   this._router = new Router();
   this._server = http.createServer(function ( req, res ) {
     try {
-      self._router.route( req, res );
+      var r = self.run_hooks( 'route', req, res );
+      if ( r !== false ) {
+        self._router.route( req, res );
+      }
     }
     catch ( err ) {
       sys.log( err );
