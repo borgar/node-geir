@@ -4,7 +4,8 @@
  */
 
 var Router = require('./router').Router,
-    http   = require('http');
+    http   = require('http'),
+    sys    = require('sys');
 
 /* * */
 
@@ -60,7 +61,7 @@ Server.prototype = {
       this.port = port;
     }
     this._server.listen( this.port );
-    console.log( 'Server started: http://127.0.0.1:' + port + '/.');
+    sys.log( 'Server started: http://127.0.0.1:' + port + '/.');
     return this;
   },
   
