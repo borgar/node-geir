@@ -26,6 +26,7 @@ function Server ( port ) {
       }
     }
     catch ( err ) {
+      sys.log([ 'ERROR:', req.method, req.url, req.headers['user-agent'] || '' ].join(' '));
       sys.log( err );
       res.writeHead( 500, 'Server error' );
       res.end();
