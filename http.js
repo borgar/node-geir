@@ -297,21 +297,21 @@ function HttpResponseNotAllowed ( permitted_methods ) {
   this.status_code = 405;
   this['Allow'] = permitted_methods.join(', ')
 }
-HttpResponseRedirect.prototype = new HttpResponse();
+HttpResponseNotAllowed.prototype = new HttpResponse();
 
 
 function HttpResponseGone ( content ) {
   this.content = content || '';
   this.status_code = 410; 
 }
-HttpResponseRedirect.prototype = new HttpResponse();
+HttpResponseGone.prototype = new HttpResponse();
 
 
 function HttpResponseServerError ( content ) {
   this.content = content || '';
   this.status_code = 500; 
 }
-HttpResponseRedirect.prototype = new HttpResponse();
+HttpResponseServerError.prototype = new HttpResponse();
 
 
 
