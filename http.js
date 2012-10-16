@@ -31,7 +31,7 @@ function HttpRequest ( request ) {
 
   this.path = url.pathname;
   this.method = request.method.toUpperCase();
-  this.GET = url.query;
+  this.GET = (typeof url.query === 'object') ? url.query : {};
   this.POST = {};
   this.META = {};
 
