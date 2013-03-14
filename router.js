@@ -33,7 +33,7 @@ Router.prototype = {
     if ( typeof path === 'string' ) { // escape regexp control chars & compile expression
       path = new RegExp( '^(' + path.replace( /[-\[\]{}()*+?.,\\^$|#\s]/g, "\\$&" ) + ')' );
     }
-    if ( typeof path !== 'function' || !('exec' in path) ) {
+    if ( typeof path !== 'function' && !('exec' in path) ) {
       throw new TypeError( 'Invalid expression passed to handler' );
     }
     this._routes[ method ].push({
